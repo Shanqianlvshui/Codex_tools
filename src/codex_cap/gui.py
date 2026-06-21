@@ -36,6 +36,7 @@ from scapy.utils import wrpcap
 from .capture import list_interfaces
 from .format import format_packet
 from . import analyze as analyze_mod
+from . import config as cfg_mod
 from .process_filter import AppPortFilter, PRESETS, resolve_preset
 
 
@@ -64,9 +65,11 @@ class CodexCapGUI:
     POLL_BATCH = 500
 
     def __init__(self) -> None:
+        self.cfg = cfg_mod.load()
+
         self.root = tk.Tk()
         self.root.title("codex-cap")
-        self.root.geometry("1280x780")
+        self.root.geometry(self.cfg.get("window_geometry", "1280x780"))
         self.root.minsize(960, 540)
 
         self.pkt_queue: queue.Queue = queue.Queue(maxsize=self.QUEUE_MAX)
@@ -78,6 +81,7 @@ class CodexCapGUI:
         self.capturing = False
 
         self._build_ui()
+        self._apply_cfg_to_widgets()
         self.root.after(self.POLL_INTERVAL_MS, self._poll_queue)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -181,8 +185,32 @@ class CodexCapGUI:
     def _refresh_ifaces(self) -> None:
         ifaces = list_interfaces()
         self.iface_combo["values"] = ifaces
-        if ifaces and not self.iface_var.get():
-            self.iface_combo.current(0)
+        # Priority: (1) saved config; (2) Loopback if available; (3) first interface
+        saved = self.cfg.get("interface") or ""
+        if saved and saved in ifaces:
+            self.iface_var.set(saved)
+            return
+        if ifaces:
+            loopback = next((i for i in ifaces if "loopback" in i.lower()), None)
+            self.iface_var.set(loopback or ifaces[0])
+
+    def _apply_cfg_to_widgets(self) -> None:
+        """Push persisted settings into the tk vars before the user sees them."""
+        self.filter_var.set(self.cfg.get("bpf_filter", "port 7892"))
+        app_choice = self.cfg.get("app_filter", "codex")
+        if app_choice in (self.app_combo["values"] or ()):
+            self.app_filter_var.set(app_choice)
+        # interface is set inside _refresh_ifaces after enumerating
+        self._refresh_ifaces()
+
+    def _save_cfg(self) -> None:
+        self.cfg.update({
+            "interface": self.iface_var.get(),
+            "bpf_filter": self.filter_var.get(),
+            "app_filter": self.app_filter_var.get(),
+            "window_geometry": self.root.geometry(),
+        })
+        cfg_mod.save(self.cfg)
 
     # ---------- capture control ----------
 
@@ -436,6 +464,7 @@ class CodexCapGUI:
             if not messagebox.askokcancel("Capture running", "Capture is still running. Stop and exit?"):
                 return
             self.stop_capture()
+        self._save_cfg()
         self.root.destroy()
 
     def run(self) -> None:
