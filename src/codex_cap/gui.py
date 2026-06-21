@@ -8,13 +8,22 @@ Layout:
 
 Capture runs in a background thread; packets are marshalled to the UI thread
 via a queue.Queue polled by Tk's `after()`.
+
+Auto-record: every Stop automatically saves the captured pcap AND the
+preliminary tshark report to `captures/cap_YYYYMMDD_HHMMSS.{pcap,txt}`
+under the project root, so the artifact is always on disk for the user
+(or their AI assistant) to read later. No clicking "Save" required.
 """
 
 from __future__ import annotations
 
 import contextlib
+import datetime as _dt
 import io
+import os
 import queue
+import subprocess
+import sys
 import time
 import tkinter as tk
 from pathlib import Path
@@ -30,6 +39,22 @@ from . import analyze as analyze_mod
 
 
 PACKET_COLUMNS = ("no", "time", "src", "dst", "proto", "len", "info")
+
+# Auto-record directory: <project_root>/captures/
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CAPTURES_DIR = PROJECT_ROOT / "captures"
+
+
+def captures_dir() -> Path:
+    CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
+    return CAPTURES_DIR
+
+
+def next_capture_paths() -> tuple[Path, Path]:
+    """Return (pcap_path, txt_report_path) for a fresh timestamped capture."""
+    ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    d = captures_dir()
+    return d / f"cap_{ts}.pcap", d / f"cap_{ts}.txt"
 
 
 class CodexCapGUI:
@@ -81,6 +106,8 @@ class CodexCapGUI:
         self.analyze_btn.pack(side=tk.LEFT, padx=2)
         self.analyze_now_btn = ttk.Button(bar, text="Analyze now", command=self.analyze_now, state=tk.DISABLED)
         self.analyze_now_btn.pack(side=tk.LEFT, padx=2)
+        ttk.Button(bar, text="Open captures folder", command=self.open_captures_folder).pack(side=tk.LEFT, padx=(16, 2))
+        ttk.Button(bar, text="Copy report", command=self.copy_report_to_clipboard).pack(side=tk.LEFT, padx=2)
 
         # Main split: packet list | (details over analysis)
         main = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
@@ -188,7 +215,35 @@ class CodexCapGUI:
         self.capturing = False
         elapsed = time.monotonic() - self.start_time
         self._set_running(False)
-        self.status_var.set(f"Stopped. {self.packet_count} packets in {elapsed:.1f}s.")
+        self.status_var.set(f"Stopped. {self.packet_count} packets in {elapsed:.1f}s. Auto-saving...")
+
+        # Auto-record: every Stop writes pcap + tshark report to captures/
+        # so the artifact is always on disk for the user / an AI assistant
+        # to read later. No need to click "Save".
+        if self.captured:
+            self._auto_record()
+
+    def _auto_record(self) -> None:
+        pcap_path, report_path = next_capture_paths()
+        try:
+            wrpcap(str(pcap_path), self.captured)
+        except Exception as exc:  # noqa: BLE001
+            self.status_var.set(f"Auto-save failed: {exc}")
+            return
+        # Run tshark analysis and write report alongside
+        try:
+            report = analyze_mod.analyze(str(pcap_path))
+            report_path.write_text(analyze_mod.render_text(report), encoding="utf-8")
+            summary = (
+                f"Auto-saved: {pcap_path.name}  +  {report_path.name}  "
+                f"({report.packet_count} pkts, {len(report.sni_counts)} SNI, "
+                f"{len(report.dns_counts)} DNS, {len(report.http_requests)} HTTP)"
+            )
+        except Exception as exc:  # noqa: BLE001
+            summary = f"Auto-saved: {pcap_path.name} (analyze failed: {exc})"
+        self.status_var.set(summary)
+        # Also render into the analysis pane so it's visible immediately
+        self._run_analyze(str(pcap_path))
 
     def _set_running(self, running: bool) -> None:
         if running:
@@ -293,6 +348,29 @@ class CodexCapGUI:
         if not path:
             return
         self._run_analyze(path)
+
+    def open_captures_folder(self) -> None:
+        """Open the captures/ directory in Windows Explorer."""
+        d = captures_dir()
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(d))  # type: ignore[attr-defined]
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(d)])
+            else:
+                subprocess.Popen(["xdg-open", str(d)])
+        except Exception as exc:  # noqa: BLE001
+            messagebox.showerror("Open folder failed", str(exc))
+
+    def copy_report_to_clipboard(self) -> None:
+        """Copy the analysis pane contents to the clipboard."""
+        text = self.analysis_text.get("1.0", tk.END).rstrip()
+        if not text:
+            messagebox.showinfo("Nothing to copy", "Run analyze first.")
+            return
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text)
+        self.status_var.set("Report copied to clipboard.")
 
     def _run_analyze(self, path: str) -> None:
         self.status_var.set(f"Analyzing {Path(path).name}...")
