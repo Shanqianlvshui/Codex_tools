@@ -142,6 +142,40 @@ class AppPortFilter:
         with self._lock:
             return set(self._target_pids)
 
+    def lookup_port(self, port: int) -> Optional[Tuple[int, str]]:
+        """Return (pid, process_name) currently using this TCP port, or None.
+
+        Used to annotate captured packets with their owning PID so the user
+        can see exactly which process each packet came from. Cached via the
+        poll loop so it's effectively O(1).
+        """
+        with self._lock:
+            port_to_pids = self._port_to_pids
+        if not port_to_pids:
+            return None
+        # Only meaningful if we have *any* target PIDs being tracked; if empty,
+        # do a fresh psutil lookup for that specific port.
+        try:
+            for c in psutil.net_connections(kind="tcp"):
+                if c.laddr and c.laddr.port == port:
+                    if c.pid:
+                        try:
+                            name = psutil.Process(c.pid).name()
+                            return (c.pid, name)
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            return (c.pid, "<unknown>")
+            return None
+        except (psutil.AccessDenied, OSError):
+            return None
+
+    def stats(self) -> dict:
+        """Snapshot for the GUI: how many ports/PIDs being tracked."""
+        with self._lock:
+            return {
+                "pids": len(self._target_pids),
+                "ports": len(self._port_to_pids),
+            }
+
     # ---------- internals ----------
 
     def _refresh(self) -> None:

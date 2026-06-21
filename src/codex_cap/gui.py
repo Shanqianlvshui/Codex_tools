@@ -40,7 +40,7 @@ from . import config as cfg_mod
 from .process_filter import AppPortFilter, PRESETS, resolve_preset
 
 
-PACKET_COLUMNS = ("no", "time", "src", "dst", "proto", "len", "info")
+PACKET_COLUMNS = ("no", "time", "process", "pid", "src", "dst", "proto", "len", "info")
 
 # Auto-record directory: <project_root>/captures/
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -75,6 +75,7 @@ class CodexCapGUI:
         self.pkt_queue: queue.Queue = queue.Queue(maxsize=self.QUEUE_MAX)
         self.captured: List[Packet] = []
         self.packet_count = 0
+        self.dropped_count = 0
         self.sniffer: Optional[AsyncSniffer] = None
         self.app_filter: Optional[AppPortFilter] = None
         self.start_time = 0.0
@@ -114,6 +115,13 @@ class CodexCapGUI:
         )
         self.app_combo.pack(side=tk.LEFT, padx=4)
 
+        self.drop_imposters_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            bar,
+            text="Drop imposters",
+            variable=self.drop_imposters_var,
+        ).pack(side=tk.LEFT, padx=(4, 0))
+
         self.start_btn = ttk.Button(bar, text="Start", command=self.start_capture)
         self.start_btn.pack(side=tk.LEFT, padx=(16, 2))
         self.stop_btn = ttk.Button(bar, text="Stop", command=self.stop_capture, state=tk.DISABLED)
@@ -134,7 +142,17 @@ class CodexCapGUI:
         list_frame = ttk.Frame(main)
         main.add(list_frame, weight=3)
 
-        widths = {"no": 50, "time": 100, "src": 200, "dst": 200, "proto": 60, "len": 70, "info": 360}
+        widths = {
+            "no": 50,
+            "time": 100,
+            "process": 160,
+            "pid": 60,
+            "src": 180,
+            "dst": 180,
+            "proto": 60,
+            "len": 70,
+            "info": 280,
+        }
         self.pkt_tree = ttk.Treeview(list_frame, columns=PACKET_COLUMNS, show="headings")
         for col in PACKET_COLUMNS:
             self.pkt_tree.heading(col, text=col.title())
@@ -260,11 +278,16 @@ class CodexCapGUI:
         )
 
     def _on_packet(self, pkt: Packet) -> None:
-        # Drop packets that don't belong to the configured app filter
-        if self.app_filter is not None and not self.app_filter.matches_packet(pkt):
+        # Filter decision: if app filter active AND drop_imposters is on, reject
+        # packets whose source/dest port is not owned by a target PID.
+        is_target = True
+        if self.app_filter is not None:
+            is_target = self.app_filter.matches_packet(pkt)
+        if not is_target and self.drop_imposters_var.get():
+            self.dropped_count += 1
             return
         try:
-            self.pkt_queue.put_nowait(pkt)
+            self.pkt_queue.put_nowait((pkt, is_target))
         except queue.Full:
             pass
 
@@ -330,22 +353,57 @@ class CodexCapGUI:
     def _poll_queue(self) -> None:
         try:
             for _ in range(self.POLL_BATCH):
-                pkt = self.pkt_queue.get_nowait()
+                item = self.pkt_queue.get_nowait()
+                pkt, is_target = item
                 self.packet_count += 1
                 self.captured.append(pkt)
                 rel_t = time.monotonic() - self.start_time
+
+                # Lookup owning process for the source port (annotation)
+                proc_name, proc_pid = "?", "?"
+                try:
+                    from scapy.layers.inet import TCP
+                    if TCP in pkt:
+                        sport = pkt[TCP].sport
+                        if self.app_filter is not None:
+                            looked = self.app_filter.lookup_port(sport)
+                            if looked:
+                                proc_pid, proc_name = looked
+                except Exception:  # noqa: BLE001
+                    pass
+
                 try:
                     line = format_packet(pkt, rel_t, self.packet_count)
-                except Exception as exc:  # noqa: BLE001 — never crash UI on a bad packet
+                except Exception as exc:  # noqa: BLE001
                     line = f"{self.packet_count:>5}  ?  ?  ->  ?  ?  ?  <format error: {exc}>"
                 parts = line.split(maxsplit=6)
-                if len(parts) < 7:
-                    parts = (parts + [""] * 7)[:7]
-                self.pkt_tree.insert("", tk.END, iid=str(self.packet_count), values=parts)
+                # Old format: [no, time, src, dst, proto, len, info]
+                # New format: [no, time, process, pid, src, dst, proto, len, info]
+                if len(parts) >= 7:
+                    src, dst, proto, length, info = parts[2], parts[3], parts[4], parts[5], parts[6]
+                else:
+                    src, dst, proto, length, info = "?", "?", "?", "?", line
+                # Highlight imposters visually
+                marker = "" if is_target else " (dropped-rule)"
+                row = [
+                    parts[0],                 # no
+                    parts[1],                 # time
+                    proc_name + marker,       # process
+                    str(proc_pid),            # pid
+                    src,                      # src
+                    dst,                      # dst
+                    proto,                    # proto
+                    length,                   # length
+                    info,                     # info
+                ]
+                self.pkt_tree.insert("", tk.END, iid=str(self.packet_count), values=row)
         except queue.Empty:
             pass
         if self.capturing:
-            self.status_var.set(f"Capturing... {self.packet_count} packets")
+            self.status_var.set(
+                f"Capturing... {self.packet_count} packets  "
+                f"({self.dropped_count} dropped by filter)"
+            )
         self.root.after(self.POLL_INTERVAL_MS, self._poll_queue)
 
     # ---------- packet details ----------
