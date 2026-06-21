@@ -1,13 +1,13 @@
 """Process-aware packet filter.
 
-Maintains a rolling set of TCP source ports belonging to processes whose
-name matches a configured list (e.g. "Codex", "ChatGPT"). Lets the
-capture pipeline drop packets that did not originate from (or terminate
-at) one of those ports — critical when capturing a system-level proxy
-port like 127.0.0.1:7892 where unrelated apps also appear.
+Maintains a rolling map of TCP source port -> set of owning PIDs for processes
+whose name matches a configured list (e.g. "Codex", "ChatGPT"). Lets the
+capture pipeline drop packets that did not originate from one of those PIDs
+on a matching port — critical when capturing a system-level proxy port like
+127.0.0.1:7892 where unrelated apps also appear.
 
 Usage:
-    flt = AppPortFilter(["Codex", "ChatGPT"], poll_interval_s=1.0)
+    flt = AppPortFilter(["Codex", "ChatGPT"], poll_interval_s=0.2)
     flt.start()
     ...
     if not flt.matches_packet(pkt):
@@ -15,16 +15,26 @@ Usage:
     ...
     flt.stop()
 
-Note: ephemeral ports move quickly. The refresh loop updates the port set
-~once per second so connections opened after that interval get picked up
-within a second. Ports closed by the process drop out at the next refresh.
+Why port + PID (not just port):
+    Ephemeral ports get reassigned to other processes quickly. A 1-second
+    poll interval misses that and lets imposters through (verified empirically:
+    Edge / Taobao / VS Code picked up Codex's just-released ports within ~100ms).
+    Tracking `port -> {pids}` lets us reject packets whose source port is
+    currently owned by a NON-target PID even if that port was a target port
+    moments ago.
+
+Note: PID-based filtering at the WinDivert driver level would be cleaner,
+but the bundled pydivert 3.1.3 filter language does not recognize `pid`
+("Filter expression contains a bad token" / WinError 87). The
+port+PID-double-check approach gets us close to driver-level accuracy
+with what works today.
 """
 
 from __future__ import annotations
 
 import threading
 import time
-from typing import Iterable, List, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set
 
 try:
     import psutil
@@ -35,26 +45,27 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 
-# Preset bundles so users don't have to remember exact process names.
 PRESETS = {
-    "codex": ["Codex", "codex"],          # Codex CLI + lowercase helper
+    "codex": ["Codex", "codex"],          # Codex Desktop + lowercase helper
     "chatgpt": ["ChatGPT"],                # ChatGPT desktop app
     "codex+chatgpt": ["Codex", "codex", "ChatGPT"],
 }
 
 
 class AppPortFilter:
-    """Dynamic port-set filter driven by psutil.net_connections()."""
+    """Dynamic port->PID map filter. Updates via psutil.net_connections()."""
 
     def __init__(
         self,
         process_names: Iterable[str],
-        poll_interval_s: float = 1.0,
+        poll_interval_s: float = 0.2,
     ) -> None:
         self.process_names: List[str] = list(process_names)
         self.poll_interval_s = poll_interval_s
-        self._ports: Set[int] = set()
-        self._pids: Set[int] = set()
+        # port -> set of PIDs currently using that port (per psutil snapshot)
+        self._port_to_pids: Dict[int, Set[int]] = {}
+        # cached set of target PIDs (for fast lookups)
+        self._target_pids: Set[int] = set()
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -78,73 +89,89 @@ class AppPortFilter:
     # ---------- matching ----------
 
     def matches_packet(self, pkt) -> bool:
-        """Return True if pkt's TCP sport/dport is in the current target-port set.
+        """Return True if pkt's TCP source port is currently owned by a target PID.
 
         If no processes are configured (empty filter), always True (no filter).
         Non-TCP packets: only pass if no filter is active.
         """
         with self._lock:
-            if not self.process_names or not self._ports:
+            if not self.process_names:
                 return True
-            ports = self._ports
+            target_pids = self._target_pids
+            port_map = self._port_to_pids
+            if not target_pids or not port_map:
+                return True  # no data yet — be permissive on cold start
 
         try:
             from scapy.layers.inet import TCP
             if TCP not in pkt:
                 return False
-            return pkt[TCP].sport in ports or pkt[TCP].dport in ports
         except Exception:  # noqa: BLE001
-            return True  # on error, don't drop — safer to capture too much than too little
+            return True
+
+        sport = pkt[TCP].sport
+        dport = pkt[TCP].dport
+
+        # Primary match: source port's owner is a target PID.
+        # (We don't trust dport==7892 because EVERYTHING connects to the
+        # proxy; the meaningful side is the source.)
+        sport_pids = port_map.get(sport, set())
+        if sport_pids & target_pids:
+            return True
+        # Fallback for SYN-ACK / proxy-response packets: the destination port
+        # is Codex's ephemeral. If Codex PID owns that port, accept.
+        dport_pids = port_map.get(dport, set())
+        if dport_pids & target_pids:
+            return True
+        return False
 
     @property
     def ports(self) -> Set[int]:
         with self._lock:
-            return set(self._ports)
+            return set(self._port_to_pids.keys())
 
     @property
     def pids(self) -> Set[int]:
         with self._lock:
-            return set(self._pids)
+            return set(self._target_pids)
 
     # ---------- internals ----------
 
     def _refresh(self) -> None:
         if not self.process_names:
             with self._lock:
-                self._ports.clear()
-                self._pids.clear()
+                self._port_to_pids.clear()
+                self._target_pids.clear()
             return
 
         # Windows psutil returns names with ".exe"; strip for comparison.
         names_lower = {n.lower().removesuffix(".exe") for n in self.process_names}
-        procs: Set[int] = set()
+        target_pids: Set[int] = set()
         try:
             for p in psutil.process_iter(["name"]):
                 n = (p.info.get("name") or "").lower().removesuffix(".exe")
                 if n and n in names_lower:
-                    procs.add(p.pid)
+                    target_pids.add(p.pid)
         except (psutil.AccessDenied, OSError):
-            procs = set()
+            target_pids = set()
 
-        ports: Set[int] = set()
-        if procs:
+        port_map: Dict[int, Set[int]] = {}
+        if target_pids:
             try:
                 for c in psutil.net_connections(kind="tcp"):
-                    if c.pid in procs and c.laddr is not None:
-                        ports.add(c.laddr.port)
+                    if c.pid in target_pids and c.laddr is not None:
+                        port_map.setdefault(c.laddr.port, set()).add(c.pid)
             except (psutil.AccessDenied, OSError):
                 # On Windows without admin, net_connections() may fail partially.
-                # Best effort: still keep pids so caller knows filter is live.
                 pass
 
         with self._lock:
-            self._pids = procs
-            self._ports = ports
+            self._target_pids = target_pids
+            self._port_to_pids = port_map
 
     def _loop(self) -> None:
         while not self._stop.is_set():
             self._refresh()
-            # wake up either on interval or on stop
             self._stop.wait(self.poll_interval_s)
 
 
