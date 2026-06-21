@@ -21,6 +21,7 @@ Thumbs.db
 *.pcap
 *.pcapng
 *.log
+captures/
 
 # Distribution
 build/
