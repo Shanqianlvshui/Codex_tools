@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-cap"
+version = "0.1.0"
+description = "Wireshark-like packet capture for Codex traffic analysis"
+requires-python = ">=3.11"
+dependencies = [
+    "scapy>=2.5",
+    "rich>=13",
+]
+
+[project.scripts]
+codex-cap = "codex_cap.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
