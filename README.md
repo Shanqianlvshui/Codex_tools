@@ -135,6 +135,28 @@ open the pcap in Wireshark directly.
 Wireshark's protocol dissectors (TLS, HTTP/2, DNS, ...) work on the saved
 pcap — this tool intentionally does NOT re-implement them.
 
+## GUI (recommended for interactive use)
+
+```powershell
+python -m codex_cap            # launches GUI by default when no args given
+python -m codex_cap gui        # explicit
+```
+
+A Tkinter window with three panes, Wireshark-style:
+
+- **Top bar** — interface dropdown, BPF filter, Start / Stop / Save pcap / Analyze buttons
+- **Left** — live packet table (No. / Time / Src / Dst / Proto / Len / Info)
+- **Top-right** — selected packet details (via scapy's `ls()`)
+- **Bottom-right** — tshark analysis output (SNI / DNS / conv table)
+
+Click a row in the packet table to see its parsed structure on the right.
+Hit `Stop`, then `Save pcap...` or `Analyze now` to write a pcap and run
+the preliminary tshark report without leaving the window.
+
+Default BPF is pre-filled with `port 7892` (Clash / common local proxy
+port) so capturing Codex's outbound traffic through a local proxy is
+one click away.
+
 ## Roadmap (later modules, not in MVP)
 
 - TLS ClientHello SNI extraction (no decryption needed)
