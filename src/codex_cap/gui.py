@@ -36,6 +36,7 @@ from scapy.utils import wrpcap
 from .capture import list_interfaces
 from .format import format_packet
 from . import analyze as analyze_mod
+from .process_filter import AppPortFilter, PRESETS, resolve_preset
 
 
 PACKET_COLUMNS = ("no", "time", "src", "dst", "proto", "len", "info")
@@ -72,6 +73,7 @@ class CodexCapGUI:
         self.captured: List[Packet] = []
         self.packet_count = 0
         self.sniffer: Optional[AsyncSniffer] = None
+        self.app_filter: Optional[AppPortFilter] = None
         self.start_time = 0.0
         self.capturing = False
 
@@ -94,7 +96,19 @@ class CodexCapGUI:
 
         ttk.Label(bar, text="BPF:").pack(side=tk.LEFT, padx=(12, 0))
         self.filter_var = tk.StringVar(value="port 7892")
-        ttk.Entry(bar, textvariable=self.filter_var, width=32).pack(side=tk.LEFT, padx=4)
+        ttk.Entry(bar, textvariable=self.filter_var, width=28).pack(side=tk.LEFT, padx=4)
+
+        ttk.Label(bar, text="App:").pack(side=tk.LEFT, padx=(8, 0))
+        self.app_filter_var = tk.StringVar(value="codex+chatgpt")
+        preset_keys = ["(none)"] + sorted(PRESETS.keys())
+        self.app_combo = ttk.Combobox(
+            bar,
+            textvariable=self.app_filter_var,
+            values=preset_keys,
+            state="readonly",
+            width=14,
+        )
+        self.app_combo.pack(side=tk.LEFT, padx=4)
 
         self.start_btn = ttk.Button(bar, text="Start", command=self.start_capture)
         self.start_btn.pack(side=tk.LEFT, padx=(16, 2))
@@ -178,6 +192,13 @@ class CodexCapGUI:
         iface = self.iface_var.get() or None
         bpf = self.filter_var.get() or None
 
+        # Resolve app filter preset -> list of process names -> AppPortFilter
+        app_choice = self.app_filter_var.get()
+        proc_names = [] if app_choice == "(none)" else (resolve_preset(app_choice) or [])
+        self.app_filter = AppPortFilter(proc_names) if proc_names else None
+        if self.app_filter is not None:
+            self.app_filter.start()
+
         self.captured.clear()
         self.packet_count = 0
         for item in self.pkt_tree.get_children():
@@ -194,14 +215,26 @@ class CodexCapGUI:
         except (OSError, PermissionError) as exc:
             messagebox.showerror("Capture failed", f"Could not start sniffer:\n{exc}")
             self.sniffer = None
+            if self.app_filter is not None:
+                self.app_filter.stop()
+                self.app_filter = None
             return
 
         self.capturing = True
         self.start_time = time.monotonic()
         self._set_running(True)
-        self.status_var.set(f"Capturing on {iface or '<default>'}  filter={bpf or '<none>'}")
+        filter_desc = f"app={app_choice}" + (
+            f" ({len(self.app_filter.ports)} ports, {len(self.app_filter.pids)} PIDs)"
+            if self.app_filter else ""
+        )
+        self.status_var.set(
+            f"Capturing on {iface or '<default>'}  bpf={bpf or '<none>'}  {filter_desc}"
+        )
 
     def _on_packet(self, pkt: Packet) -> None:
+        # Drop packets that don't belong to the configured app filter
+        if self.app_filter is not None and not self.app_filter.matches_packet(pkt):
+            return
         try:
             self.pkt_queue.put_nowait(pkt)
         except queue.Full:
@@ -214,8 +247,15 @@ class CodexCapGUI:
         self.sniffer = None
         self.capturing = False
         elapsed = time.monotonic() - self.start_time
+        app_info = ""
+        if self.app_filter is not None:
+            app_info = f"  app-filter={self.app_filter_var.get()} (PIDs: {sorted(self.app_filter.pids)})"
+            self.app_filter.stop()
+            self.app_filter = None
         self._set_running(False)
-        self.status_var.set(f"Stopped. {self.packet_count} packets in {elapsed:.1f}s. Auto-saving...")
+        self.status_var.set(
+            f"Stopped. {self.packet_count} packets in {elapsed:.1f}s.{app_info}  Auto-saving..."
+        )
 
         # Auto-record: every Stop writes pcap + tshark report to captures/
         # so the artifact is always on disk for the user / an AI assistant

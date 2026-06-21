@@ -1,0 +1,162 @@
+=== codex-cap analysis: C:\Workspace\Codex_tools\captures\cap_20260622_013028.pcap ===
+
+  packets : 2318
+  duration: 26.701 s
+
+--- TLS SNI (top 20) ---
+     47  chatgpt.com
+      2  chat.openai.com
+      2  persistent.oaistatic.com
+      2  android.clients.google.com
+      1  vcode-h5-od.vivo.com.cn
+      1  o33249.ingest.us.sentry.io
+      1  graph.microsoft.com
+      1  accounts.google.com
+      1  www.google.com
+      1  ab.chatgpt.com
+      1  mtalk.google.com
+
+--- DNS queries (top 20) ---
+  (no DNS queries captured)
+
+--- HTTP requests (60) ---
+  CONNECT  vcode-h5-od.vivo.com.cn:443vcode-h5-od.vivo.com.cn:443
+  CONNECT  chat.openai.com:443chat.openai.com:443
+  CONNECT  o33249.ingest.us.sentry.io:443o33249.ingest.us.sentry.io:443
+  CONNECT  graph.microsoft.com:443graph.microsoft.com:443
+  CONNECT  persistent.oaistatic.com:443persistent.oaistatic.com:443
+  CONNECT  persistent.oaistatic.com:443persistent.oaistatic.com:443
+  CONNECT  accounts.google.com:443accounts.google.com:443
+  CONNECT  www.google.com:443www.google.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  ab.chatgpt.com:443ab.chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chat.openai.com:443chat.openai.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  mtalk.google.com:5228mtalk.google.com:5228
+  CONNECT  android.clients.google.com:443android.clients.google.com:443
+  CONNECT  android.clients.google.com:443android.clients.google.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  CONNECT  chatgpt.com:443chatgpt.com:443
+  ... (10 more)
+
+--- TCP conversations (tshark conv,tcp) ---
+================================================================================
+TCP Conversations
+Filter:<No Filter>
+                                                           |       <-      | |       ->      | |     Total     |    Relative    |   Duration   |
+                                                           | Frames  Bytes | | Frames  Bytes | | Frames  Bytes |      Start     |              |
+127.0.0.1:64378            <-> 127.0.0.1:7892                 141 76 kB         141 587 kB        282 664 kB       20.511875000         4.1363
+127.0.0.1:55043            <-> 127.0.0.1:7892                  93 1015 kB        94 7445 bytes     187 1022 kB      24.258332000         1.7077
+127.0.0.1:55004            <-> 127.0.0.1:7892                  92 1015 kB        93 7401 bytes     185 1022 kB      22.485922000         1.7697
+127.0.0.1:53210            <-> 127.0.0.1:7892                  33 119 kB         34 4352 bytes      67 123 kB       18.437471000         0.8990
+127.0.0.1:59335            <-> 127.0.0.1:7892                  19 8730 bytes      20 3559 bytes      39 12 kB        17.344508000         7.3033
+127.0.0.1:54994            <-> 127.0.0.1:7892                  19 6205 bytes      20 29 kB          39 35 kB        21.881851000         2.7663
+127.0.0.1:53204            <-> 127.0.0.1:7892                  18 8326 bytes      19 3307 bytes      37 11 kB        17.345295000         7.3024
+127.0.0.1:50740            <-> 127.0.0.1:7892                  16 5931 bytes      17 4615 bytes      33 10 kB        20.195007000         4.4530
+127.0.0.1:52945            <-> 127.0.0.1:7892                  15 3428 bytes      17 5880 bytes      32 9308 bytes    11.739473000         0.4106
+127.0.0.1:55287            <-> 127.0.0.1:7892                  15 5264 bytes      17 3796 bytes      32 9060 bytes    11.740047000         0.4101
+127.0.0.1:60254            <-> 127.0.0.1:7892                  15 1450 bytes      16 5675 bytes      31 7125 bytes    11.200876000        14.6414
+127.0.0.1:49848            <-> 127.0.0.1:7892                  15 5729 bytes      16 3425 bytes      31 9154 bytes    17.319529000         7.3285
+127.0.0.1:64219            <-> 127.0.0.1:7892                  15 8673 bytes      16 3391 bytes      31 12 kB        24.647330000         0.5074
+127.0.0.1:53217            <-> 127.0.0.1:7892                  14 5268 bytes      15 3570 bytes      29 8838 bytes    18.438297000         0.6687
+127.0.0.1:53212            <-> 127.0.0.1:7892                  13 5224 bytes      14 3468 bytes      27 8692 bytes    18.437470000         0.6545
+127.0.0.1:53211            <-> 127.0.0.1:7892                  13 5218 bytes      14 3493 bytes      27 8711 bytes    18.437474000         0.6682
+127.0.0.1:53213            <-> 127.0.0.1:7892                  13 6643 bytes      14 3442 bytes      27 10 kB        18.437475000         0.6572
+127.0.0.1:53215            <-> 127.0.0.1:7892                  13 5254 bytes      14 3531 bytes      27 8785 bytes    18.437936000         0.6829
+127.0.0.1:53216            <-> 127.0.0.1:7892                  13 5232 bytes      14 3551 bytes      27 8783 bytes    18.438251000         0.6697
+127.0.0.1:54995            <-> 127.0.0.1:7892                  13 5364 bytes      14 3541 bytes      27 8905 bytes    21.976046000         0.4610
+127.0.0.1:55000            <-> 127.0.0.1:7892                  13 4531 bytes      14 3920 bytes      27 8451 bytes    22.010857000         0.4761
+127.0.0.1:55002            <-> 127.0.0.1:7892                  13 4560 bytes      14 3920 bytes      27 8480 bytes    22.318421000         0.4661
+127.0.0.1:55003            <-> 127.0.0.1:7892                  13 5102 bytes      14 3403 bytes      27 8505 bytes    22.436856000         0.4621
+127.0.0.1:55029            <-> 127.0.0.1:7892                  13 5186 bytes      14 3434 bytes      27 8620 bytes    22.898937000         0.4574
+127.0.0.1:55030            <-> 127.0.0.1:7892                  13 4526 bytes      14 3920 bytes      27 8446 bytes    23.218929000         0.4830
+127.0.0.1:64220            <-> 127.0.0.1:7892                  13 4535 bytes      14 3920 bytes      27 8455 bytes    24.712922000         0.5921
+127.0.0.1:64224            <-> 127.0.0.1:7892                  13 4560 bytes      14 3918 bytes      27 8478 bytes    24.714082000         0.4541
+127.0.0.1:64225            <-> 127.0.0.1:7892                  13 4529 bytes      14 3943 bytes      27 8472 bytes    24.714579000         0.4866
+127.0.0.1:64234            <-> 127.0.0.1:7892                  13 4535 bytes      14 3920 bytes      27 8455 bytes    25.964655000         0.5028
+127.0.0.1:64238            <-> 127.0.0.1:7892                  13 4532 bytes      14 3948 bytes      27 8480 bytes    25.966146000         0.4475
+127.0.0.1:65218            <-> 127.0.0.1:7892                  13 5100 bytes      14 3403 bytes      27 8503 bytes    26.065750000         0.4494
+127.0.0.1:53214            <-> 127.0.0.1:7892                  12 5180 bytes      13 3512 bytes      25 8692 bytes    18.437914000         0.6524
+127.0.0.1:55001            <-> 127.0.0.1:7892                  12 4496 bytes      13 3876 bytes      25 8372 bytes    22.023430000         0.4619
+127.0.0.1:55006            <-> 127.0.0.1:7892                  12 4455 bytes      13 3876 bytes      25 8331 bytes    22.485922000         0.4589
+127.0.0.1:55005            <-> 127.0.0.1:7892                  12 4491 bytes      13 3876 bytes      25 8367 bytes    22.485930000         0.7330
+127.0.0.1:55007            <-> 127.0.0.1:7892                  12 4489 bytes      13 3879 bytes      25 8368 bytes    22.486432000         0.6467
+127.0.0.1:55008            <-> 127.0.0.1:7892                  12 4491 bytes      13 3901 bytes      25 8392 bytes    22.486952000         0.6661
+127.0.0.1:55009            <-> 127.0.0.1:7892                  12 4485 bytes      13 3874 bytes      25 8359 bytes    22.487108000         0.4664
+127.0.0.1:55010            <-> 127.0.0.1:7892                  12 4490 bytes      13 3904 bytes      25 8394 bytes    22.487365000         0.5951
+127.0.0.1:55011            <-> 127.0.0.1:7892                  12 4481 bytes      13 3899 bytes      25 8380 bytes    22.487798000         0.6621
+127.0.0.1:55031            <-> 127.0.0.1:7892                  12 4495 bytes      13 3879 bytes      25 8374 bytes    23.219376000         0.5321
+127.0.0.1:55032            <-> 127.0.0.1:7892                  12 4492 bytes      13 3874 bytes      25 8366 bytes    23.219720000         0.4927
+127.0.0.1:55039            <-> 127.0.0.1:7892                  12 4490 bytes      13 3876 bytes      25 8366 bytes    24.147849000         0.5649
+127.0.0.1:64222            <-> 127.0.0.1:7892                  12 4486 bytes      13 3879 bytes      25 8365 bytes    24.713534000         0.4748
+127.0.0.1:64221            <-> 127.0.0.1:7892                  12 4495 bytes      13 3901 bytes      25 8396 bytes    24.713534000         0.4849
+127.0.0.1:64223            <-> 127.0.0.1:7892                  12 4483 bytes      13 3904 bytes      25 8387 bytes    24.714063000         0.4836
+127.0.0.1:64229            <-> 127.0.0.1:7892                  12 4482 bytes      13 3876 bytes      25 8358 bytes    25.431179000         0.5329
+127.0.0.1:64230            <-> 127.0.0.1:7892                  12 5325 bytes      13 3497 bytes      25 8822 bytes    25.598479000         0.4673
+127.0.0.1:64231            <-> 127.0.0.1:7892                  12 4514 bytes      13 4569 bytes      25 9083 bytes    25.606006000         0.4593
+127.0.0.1:64235            <-> 127.0.0.1:7892                  12 4484 bytes      13 3879 bytes      25 8363 bytes    25.965089000         0.4667
+127.0.0.1:64236            <-> 127.0.0.1:7892                  12 4488 bytes      13 3874 bytes      25 8362 bytes    25.965405000         0.5138
+127.0.0.1:64237            <-> 127.0.0.1:7892                  12 4483 bytes      13 3901 bytes      25 8384 bytes    25.965699000         0.4822
+127.0.0.1:64239            <-> 127.0.0.1:7892                  12 4486 bytes      13 3899 bytes      25 8385 bytes    25.966553000         0.5009
+127.0.0.1:56396            <-> 127.0.0.1:7892                  12 4620 bytes      12 3924 bytes      24 8544 bytes     0.842838000        25.0564
+127.0.0.1:57905            <-> 127.0.0.1:7892                  12 1307 bytes      12 1521 bytes      24 2828 bytes     1.996017000        20.1053
+127.0.0.1:63412            <-> 127.0.0.1:7892                  11 7431 bytes      12 2678 bytes      23 10 kB        24.614455000         0.5379
+127.0.0.1:55324            <-> 127.0.0.1:7892                  10 5906 bytes      11 2997 bytes      21 8903 bytes    15.711261000         0.4939
+127.0.0.1:54996            <-> 127.0.0.1:7892                   9 3418 bytes      10 3757 bytes      19 7175 bytes    21.977980000         0.1878
+127.0.0.1:64240            <-> 127.0.0.1:7892                   8 3373 bytes       9 3674 bytes      17 7047 bytes    25.968877000         0.1816
+127.0.0.1:65222            <-> 127.0.0.1:7892                   7 3330 bytes       8 683 bytes      15 4013 bytes    26.514864000         0.1863
+127.0.0.1:63450            <-> 127.0.0.1:7892                   7 733 bytes       7 1519 bytes      14 2252 bytes     4.422097000        15.0563
+127.0.0.1:54820            <-> 127.0.0.1:7892                   6 315 bytes       7 2326 bytes      13 2641 bytes    17.271036000         0.0484
+127.0.0.1:56392            <-> 127.0.0.1:7892                   6 315 bytes       7 2396 bytes      13 2711 bytes    24.615148000         0.0319
+127.0.0.1:7892             <-> 127.0.0.1:55571                  4 176 bytes       3 209 bytes       7 385 bytes     2.129615000         0.0002
+127.0.0.1:7892             <-> 127.0.0.1:50113                  3 157 bytes       3 146 bytes       6 303 bytes     0.215682000        15.0095
+127.0.0.1:58524            <-> 127.0.0.1:7892                   3 146 bytes       3 157 bytes       6 303 bytes     9.780611000        15.0085
+127.0.0.1:56121            <-> 127.0.0.1:7892                   2 101 bytes       3 145 bytes       5 246 bytes     6.668773000         5.0709
+127.0.0.1:7892             <-> 127.0.0.1:55511                  2 88 bytes        2 88 bytes        4 176 bytes     0.000000000         0.0003
+127.0.0.1:7892             <-> 127.0.0.1:55549                  2 88 bytes        2 88 bytes        4 176 bytes     0.025681000         0.0002
+127.0.0.1:7892             <-> 127.0.0.1:51379                  2 112 bytes       2 90 bytes        4 202 bytes     0.129375000        15.0027
+127.0.0.1:7892             <-> 127.0.0.1:51441                  2 112 bytes       2 90 bytes        4 202 bytes     2.766930000        15.0052
+127.0.0.1:7892             <-> 127.0.0.1:50459                  2 112 bytes       2 90 bytes        4 202 bytes     5.804985000        15.0096
+127.0.0.1:7892             <-> 127.0.0.1:52283                  2 112 bytes       2 90 bytes        4 202 bytes     6.809591000        15.0097
+127.0.0.1:7892             <-> 127.0.0.1:52270                  2 112 bytes       2 90 bytes        4 202 bytes     6.920147000        15.0083
+127.0.0.1:7892             <-> 127.0.0.1:51481                  2 112 bytes       2 90 bytes        4 202 bytes     7.738890000        15.0141
+127.0.0.1:7892             <-> 127.0.0.1:51540                  2 112 bytes       2 90 bytes        4 202 bytes    11.308141000        15.0099
+127.0.0.1:7892             <-> 127.0.0.1:62722                  2 100 bytes       1 45 bytes        3 145 bytes     0.138773000        12.0118
+127.0.0.1:63859            <-> 127.0.0.1:7892                   0 0 bytes         3 168 bytes       3 168 bytes    20.711830000         3.0205
+127.0.0.1:55888            <-> 127.0.0.1:7892                   0 0 bytes         3 168 bytes       3 168 bytes    20.967768000         3.0123
+127.0.0.1:60229            <-> 127.0.0.1:7892                   0 0 bytes         1 44 bytes        1 44 bytes     12.150505000         0.0000
+127.0.0.1:65217            <-> 127.0.0.1:7892                   0 0 bytes         1 56 bytes        1 56 bytes     26.024919000         0.0000
+================================================================================
