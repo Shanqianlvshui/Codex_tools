@@ -80,6 +80,52 @@ One line per packet, Wireshark-style columns:
       1   0.000123   192.168.1.5                                -> 1.1.1.1                                  TLS        517  443 -> 60412 [S] Seq=...
 ```
 
+## Analyze a captured pcap (preliminary report)
+
+After capturing traffic, run a quick analysis without opening Wireshark:
+
+```powershell
+python -m codex_cap analyze codex_sample.pcap
+```
+
+Uses tshark (bundled with Wireshark) to extract:
+
+- Packet count + capture duration
+- TLS SNI (which domains Codex reached)
+- DNS queries
+- HTTP requests (if any plain-text HTTP)
+- TCP conversations with byte counts
+
+tshark path is auto-detected (`C:\Program Files\Wireshark\tshark.exe`,
+`tshark` on `PATH`, or Wireshark install on macOS/Linux). Pass
+`--tshark PATH` to override.
+
+### Sample output
+
+```text
+=== codex-cap analysis: codex_sample.pcap ===
+
+  packets : 1234
+  duration: 60.123 s
+
+--- TLS SNI (top 20) ---
+     47  chatgpt.com
+     12  api.openai.com
+      3  statsigapi.net
+      ...
+
+--- DNS queries (top 20) ---
+     12  chatgpt.com
+      ...
+
+--- TCP conversations (tshark conv,tcp) ---
+...
+```
+
+This is the first-cut "what is Codex talking to?" view. For deeper
+inspection (full TLS details, stream following, HTTP/2 headers),
+open the pcap in Wireshark directly.
+
 ## Open the pcap in Wireshark
 
 ```powershell
