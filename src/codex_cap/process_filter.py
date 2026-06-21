@@ -92,15 +92,22 @@ class AppPortFilter:
         """Return True if pkt's TCP source port is currently owned by a target PID.
 
         If no processes are configured (empty filter), always True (no filter).
-        Non-TCP packets: only pass if no filter is active.
+        If target PIDs is empty (target process not running), always False
+        (strict — don't leak non-target traffic).
+        Non-TCP packets: pass if no filter active, drop if filter active.
         """
         with self._lock:
             if not self.process_names:
                 return True
             target_pids = self._target_pids
             port_map = self._port_to_pids
-            if not target_pids or not port_map:
-                return True  # no data yet — be permissive on cold start
+            if not target_pids:
+                # Strict: no target running -> block everything.
+                return False
+            if not port_map:
+                # Have target PIDs but their TCP tables haven't been read yet.
+                # Strict: don't accept anything we can't prove is from a target.
+                return False
 
         try:
             from scapy.layers.inet import TCP
